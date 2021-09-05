@@ -2,9 +2,9 @@ require('dotenv').config();
 const { Client, Intents, MessageActionRow, MessageButton } = require('discord.js');
 const Twitter = require('twitter');
 const client = new Client({
-    intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+    intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_INTEGRATIONS],
     allowedMentions: {
-        parse: ['users'],
+        parse: [],
         repliedUser: false
     }
 });
@@ -32,21 +32,44 @@ twitter.stream('statuses/filter', { follow: '1287206636046581760' }, function (s
     */
 
     // RTを通知する
-    stream.on('data', function (event) {
-        console.log(event);
+    stream.on('data', async function (event) {
         if (!event.text.startsWith('RT')) return;
-        client.channels.cache.get('883387753587417099').send(`https://twitter.com/${event.user.screen_name}/status/${event.id_str}`);
+        const buttons = new MessageActionRow()
+            .addComponents(
+                [
+                    new MessageButton()
+                        .setCustomId('ok')
+                        .setEmoji('880399424638025769')
+                        .setStyle('SUCCESS'),
+                    new MessageButton()
+                        .setCustomId('no')
+                        .setEmoji('880399424638025728')
+                        .setStyle('DANGER')
+                ]
+            );
+        const msg = await client.channels.cache.get('883387753587417099').send({
+            content: `https://twitter.com/${event.user.screen_name}/status/${event.id_str}`,
+            components: [buttons]
+        });
+        const filter = (interaction) => {
+            return (interaction.customId === 'ok' || interaction.customId === 'no') && interaction.user.id === '714455926970777602';
+        };
+        const collector = msg.createMessageComponentCollector({ filter, componentType: 'BUTTON' });
+        collector.on('collect', async (interaction) => {
+            if (interaction.customId === 'ok') {
+                await client.channels.cache.get('858642965961375774').send(msg.content);
+                await interaction.message.delete();
+            }
+            else await interaction.message.delete();
+
+            collector.stop();
+        });
     });
 
     stream.on('error', function (error) {
         console.error(error);
     });
 });
-
-twitter.get('users/lookup', { screen_name: 'ken_cir' }, function (error, tweets, response) {
-    console.log(error);
-    console.log(tweets);
-})
 
 client.on('messageCreate', async message => {
     if (message.system || !message.guildId || message.author.id !== '714455926970777602' || message.channelId !== '880397683465007174') return;
