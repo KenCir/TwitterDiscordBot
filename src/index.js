@@ -27,61 +27,9 @@ client.on('ready', () => {
     client.user.setStatus('idle');
 });
 
-twitter.stream('statuses/filter', { track: Object.keys(config.tracks).join(',') }, function (stream) {
-    stream.on('data', async function (event) {
-        if ((!config.mention && event.text.startsWith('@')) || (!config.retweet && event.retweeted_status) || (!config.quotedreTweet && event.quoted_status_id_str) || config.blacklist.includes(event.user.id_str)) return;
-
-        /**
-         * @type {import('discord.js').Message}
-         */
-        const msg = await client.channels.cache.get(process.env.DISCORD_CHANNELID).send({
-            content: `https://twitter.com/${event.user.screen_name}/status/${event.id_str}`,
-            components: [
-                new MessageActionRow()
-                    .addComponents(
-                        [
-                            new MessageButton()
-                                .setCustomId('ok')
-                                .setEmoji('881574101041442887')
-                                .setStyle('PRIMARY'),
-                            new MessageButton()
-                                .setCustomId('no')
-                                .setEmoji('881574101444083742')
-                                .setStyle('PRIMARY'),
-                        ],
-                    ),
-            ],
-        });
-        const filter = (interaction) => {
-            return (interaction.customId === 'ok' || interaction.customId === 'no') && interaction.user.id === process.env.DISCORD_USERID;
-        };
-        const collector = msg.createMessageComponentCollector({ filter, componentType: 'BUTTON' });
-        collector.on('collect', async (interaction) => {
-            if (interaction.customId === 'ok') {
-                for (const tag in config.tracks) {
-                    if (event.text.match(tag)) {
-                        client.channels.cache.get(config.tracks[tag]).send(`https://twitter.com/${event.user.screen_name}/status/${event.id_str}`);
-                        msg.delete();
-                        return;
-                    }
-                }
-            }
-            else {
-                msg.delete();
-            }
-
-            collector.stop();
-        });
-    });
-
-    stream.on('error', function (error) {
-        console.error(error);
-    });
-});
-
 twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(',') }, function (stream) {
     stream.on('data', async function (event) {
-        if ((!config.mention && event.text.startsWith('@')) || (!config.retweet && event.text.startsWith('RT')) || (!config.quotedreTweet && event.quoted_status_id_str) || config.blacklist.includes(event.user.id_str)) return;
+        if ((!config.mention && event.text.startsWith('@')) || (!config.retweet && event.text.startsWith('RT')) || (config.retweet && !Object.keys(config.follows).includes(event.user.id_str)) || (!config.quotedreTweet && event.quoted_status_id_str) || config.blacklist.includes(event.user.id_str)) return;
 
         const msg = await client.channels.cache.get(process.env.DISCORD_CHANNELID).send({
             content: `${event.user.name}の新規ツイートです\nhttps://twitter.com/${event.user.screen_name}/status/${event.id_str}`,
