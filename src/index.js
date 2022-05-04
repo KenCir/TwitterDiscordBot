@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Client, Intents, MessageActionRow, MessageButton } = require('discord.js');
 const Twitter = require('twitter');
 const config = require('../config.json');
+const { spawn } = require('child_process');
 const client = new Client({
     intents: [
         Intents.FLAGS.GUILDS,
@@ -32,12 +33,14 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
         if ((!config.mention && event.text.startsWith('@')) || (!config.retweet && event.text.startsWith('RT')) || (config.retweet && !Object.keys(config.follows).includes(event.user.id_str)) || (!config.quotedreTweet && event.quoted_status_id_str) || config.blacklist.includes(event.user.id_str)) return;
 
         let id_str = event.id_str;
+        let rt = false;
         if (event.text.startsWith('RT')) {
             id_str = event.retweeted_status.id_str;
+            rt = true;
         }
 
         const msg = await client.channels.cache.get(process.env.DISCORD_CHANNELID).send({
-            content: `${event.user.name}の新規ツイートです\nhttps://twitter.com/${event.user.screen_name}/status/${id_str}`,
+            content: `${event.user.name}の新規${rt ? 'リ' : ''}ツイートです\nhttps://twitter.com/${event.user.screen_name}/status/${id_str}`,
             components: [
                 new MessageActionRow()
                     .addComponents(
@@ -78,6 +81,7 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
 
     stream.on('error', function (error) {
         console.error(error);
+        restart();
     });
 });
 
@@ -127,14 +131,24 @@ client.on('messageCreate', async message => {
             collector.stop();
         });
     }
-
-    if (message.content.startsWith('?twrestart')) {
-        process.exit();
-    }
 });
 
 process.on('unhandledRejection', error => {
     console.error(error);
+    restart();
 });
+
+function restart() {
+    if (process.env.process_restarting) {
+        delete process.env.process_restarting;
+        setTimeout(restart, 1000);
+        return;
+    }
+
+    spawn(process.argv[0], process.argv.slice(1), {
+        env: { process_restarting: 1 },
+        stdio: 'ignore',
+    }).unref();
+}
 
 client.login();
