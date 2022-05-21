@@ -2,7 +2,6 @@ require('dotenv').config();
 const { Client, Intents, MessageActionRow, MessageButton } = require('discord.js');
 const Twitter = require('twitter');
 const config = require('../config.json');
-const { spawn } = require('child_process');
 const client = new Client({
     intents: [
         Intents.FLAGS.GUILDS,
@@ -81,7 +80,7 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
 
     stream.on('error', function (error) {
         console.error(error);
-        restart();
+        process.exit();
     });
 });
 
@@ -135,22 +134,7 @@ client.on('messageCreate', async message => {
 
 process.on('unhandledRejection', error => {
     console.error(error);
-    restart();
-});
-
-function restart() {
-    if (process.env.process_restarting) {
-        delete process.env.process_restarting;
-        setTimeout(restart, 1000);
-        return;
-    }
-
-    spawn(process.argv[0], process.argv.slice(1), {
-        env: { process_restarting: 1 },
-        stdio: 'ignore',
-    }).unref();
-
     process.exit();
-}
+});
 
 client.login();
