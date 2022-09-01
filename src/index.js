@@ -2,18 +2,6 @@ require('dotenv').config();
 const { WebhookClient } = require('discord.js');
 const Twitter = require('twitter');
 const config = require('../config.json');
-/*
-const client = new Client({
-    intents: [
-        IntentsBitField.Flags.Guilds,
-        IntentsBitField.Flags.GuildIntegrations,
-    ],
-    allowedMentions: {
-        parse: [],
-        repliedUser: false,
-    },
-});
-*/
 
 const twitter = new Twitter({
     consumer_key: process.env.TWITTER_KET,
@@ -33,7 +21,7 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
             rt = true;
         }
 
-        const webhook = new WebhookClient({ url: process.env.WEBHOOK_URL });
+        const webhook = new WebhookClient({ url: config.follows[event.user.id_str] });
         await webhook.send(`${event.user.name}の新規${rt ? 'リ' : ''}ツイートです\nhttps://twitter.com/${event.user.screen_name}/status/${id_str}`);
         /*
         const msg = await client.channels.cache.get(process.env.DISCORD_CHANNELID).send({
