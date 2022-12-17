@@ -14,6 +14,8 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
     stream.on('data', async function (event) {
         if ((!config.mention && event.text.startsWith('@')) || (!config.retweet && event.text.startsWith('RT')) || (config.retweet && !Object.keys(config.follows).includes(event.user.id_str)) || (!config.quotedreTweet && event.quoted_status_id_str) || config.blacklist.includes(event.user.id_str)) return;
 
+        console.log(event);
+
         let id_str = event.id_str;
         let rt = false;
         if (event.text.startsWith('RT')) {
@@ -26,6 +28,7 @@ twitter.stream('statuses/filter', { follow: Object.keys(config.follows).join(','
             await webhook.send({
                 content: `${event.user.name}の新規${rt ? 'リ' : ''}ツイートです\nhttps://twitter.com/${event.user.screen_name}/status/${id_str}`,
                 avatarURL: event.user.profile_image_url_https,
+                username: event.user.name,
             });
         }
 
